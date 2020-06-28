@@ -1,0 +1,24 @@
+{
+    "name": "deepstream.io-tictactoa",
+    "description": "deepstream.io-tictactoa",
+    "version": "0.0.1",
+    "author": "apostx",
+    "license": "MIT",
+    "repository": "github:apostx/deepstream.io-tictactoa",
+    "dependencies": {
+        "@deepstream/client": "5.1.0"
+    },
+    "main": "app/index.js",
+	"scripts": {
+        "start": "node app/index.js"
+    },
+    "engines": {
+        "node": ">=12.0.0"
+    },
+    "files": [
+        "LICENSE",
+        "Readme.md",
+        "app/",
+        "public/"
+    ]
+}

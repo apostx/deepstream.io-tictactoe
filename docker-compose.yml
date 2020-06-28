@@ -1,0 +1,13 @@
+version: '3'
+services:
+    deepstream:
+        image: deepstreamio/deepstream.io:5.1.1-alpine
+        ports:
+            - "6020:6020"
+            - "8080:8080"
+    nginx:
+        image: nginx:1.19.0-alpine
+        ports:
+            - "80:80"
+        volumes:
+            - ./public/:/usr/share/nginx/html/

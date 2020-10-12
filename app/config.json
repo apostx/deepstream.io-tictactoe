@@ -1,0 +1,6 @@
+{
+    "game": {
+        "playerLimit": 2,
+        "tableSize": 3
+    }
+}

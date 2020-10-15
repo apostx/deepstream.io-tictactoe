@@ -50,9 +50,11 @@ RpcResult rpcResult = client.rpc.make( "multiply-numbers", jsonObject);
 int result = (Integer) rpcResult.getData(); // 56
 */
 
+/*
 if (process.argv.length < 3) {
-    throw new Error('Missing serviceName argument');
+ throw new Error('Missing serviceName argument');
 }
+*/
 
 /*
 const serviceName = process.argv[2];
@@ -62,6 +64,8 @@ const service = new ServiceClass();
 service.start();
 */
 
+const sleep = (time) => new Promise(resolve => setTimeout(resolve, time));
+
 const test = async() => {
     const GameService = require('./services/GameService');
     const gameService = new GameService();
@@ -69,17 +73,45 @@ const test = async() => {
     const RoomService = require('./services/RoomService');
     const roomService = new RoomService();
 
+    const TestClientService = require('./services/TestClientService');
+    const player1 = new TestClientService();
+    const player2 = new TestClientService();
+
     await Promise.all([
-        gameService.start(),
         roomService.start(),
+        gameService.start(),
+        player1.start(),
+        player2.start(),
     ]);
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await sleep(1000);
 
-    const TestClientService = require('./services/TestClientService');
-    const testClientService = new TestClientService();
+    const runTestGame = async() => {
+        const roomId = await player1.createAndJoinRoom();
+        await player2.joinRoom(roomId);
 
-    await testClientService.start();
+        var nextTurnPromises;
+        var markPromises;
+
+        nextTurnPromises = [player1.waitForNextTurn(), player2.waitForNextTurn()];
+
+        player2.subscribeGame(roomId);
+        await player1.startGame(roomId, player1.id, player2.id);
+
+        await Promise.all(nextTurnPromises);
+
+        nextTurnPromises = [player1.waitForNextTurn(), player2.waitForNextTurn()];
+        markPromises = [player1.waitForMark(), player2.waitForMark()];
+
+        player1.markField(roomId, 0, 0);
+
+        await Promise.all(nextTurnPromises);
+        await Promise.all(markPromises);
+
+        console.log(12);
+    };
+
+    await runTestGame();
 };
 
 test();

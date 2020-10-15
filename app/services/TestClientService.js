@@ -1,34 +1,80 @@
 const BaseService = require('../core/BaseService');
 // const RoomData = require('../data/RoomData');
-// const uuid = require('../utils/uuid');
+const uuid = require('../utils/uuid');
 
-const SERVICE_NAME = 'room';
+const SERVICE_NAME = 'client';
 
 class TestClientService extends BaseService {
     get eventHandlers() {
         return {
-            'room/fullRoom': this.startGame,
+            'game/nextTurn': this.onNextTurn,
+            'game/mark': this.onMark,
         };
     }
 
     constructor() {
         super(SERVICE_NAME);
+
+        this.id = uuid.generateV4Id();
+
+        this.generateNextTurnPromise();
+        this.generateMarkPromise();
+
+        this.onNextTurn = this.onNextTurn.bind(this);
+        this.onMark = this.onMark.bind(this);
     }
 
-    async createAndJoinRoom(connectionChannel, playerId) {
-        const {roomId} = await this.rpc.make('room.create', {playerId});
+    generateNextTurnPromise() {
+        this.resolveNextTurnPromise = null;
+        this.nextTurnPromise = new Promise(resolve => { this.resolveNextTurnPromise = resolve; });
+    }
 
-        this.subscribeGameEvents(connectionChannel, roomId);
+    generateMarkPromise() {
+        this.resolveMarkPromise = null;
+        this.markPromise = new Promise(resolve => { this.resolveMarkPromise = resolve; });
+    }
+
+    onNextTurn(data) {
+        this.resolveNextTurnPromise(data);
+        this.generateNextTurnPromise();
+    }
+
+    onMark(data) {
+        this.resolveMarkPromise(data);
+        this.generateMarkPromise();
+    }
+
+    async waitForNextTurn() {
+        await this.nextTurnPromise;
+    }
+
+    async waitForMark() {
+        await this.markPromise;
+    }
+
+    async createAndJoinRoom() {
+        const {roomId} = await this.rpc.make('room.create', {userId: this.id});
 
         return roomId;
     }
 
-    async joinRoom(connectionChannel, playerId, roomId) {
-        await this.rpc.make('room.join', {roomId, playerId});
+    async joinRoom(roomId) {
+        await this.rpc.make('room.join', {roomId, userId: this.id});
+    }
 
-        this.subscribeGameEvents(connectionChannel, roomId);
+    subscribeGame(roomId) {
+        this.event.subscribe(`game/${roomId}/nextTurn`, this.onNextTurn);
+        this.event.subscribe(`game/${roomId}/mark`, this.onMark);
+    }
 
-        return roomId;
+    async startGame(roomId, firstPlayer, secondPlayer) {
+        this.subscribeGame(roomId);
+        await this.rpc.make('game.start', {roomId, firstPlayer, secondPlayer});
+    }
+
+    async markField(roomId, colIndex, rowIndex) {
+        this.subscribeGame(roomId);
+        await this.rpc.make('game.mark', {player: this.id, roomId, colIndex, rowIndex});
     }
 }
 
@@ -108,7 +154,8 @@ class TestConnection
             await this.clientBridge.markField(this.roomId, this.id, this.nextField.colIndex, this.nextField.rowIndex++);
         }
     }
+
 }
-*/
 
 module.exports = TestClientService;
+*/

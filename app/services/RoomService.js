@@ -18,40 +18,36 @@ class RoomService extends BaseService {
     }
 
     async createAndJoinRoom(data, response) {
-        const {playerId} = data;
+        const {userId} = data;
         const roomId = uuid.generateV4Id();
         const roomData = this.getRoomData();
 
-        await roomData.createAndJoinRoom(roomId, playerId);
+        await roomData.createAndJoinRoom(roomId, userId);
 
         response.send({roomId});
     }
 
     async joinRoom(data, response) {
-        const {roomId, playerId} = data;
+        const {roomId, userId} = data;
         const roomData = this.getRoomData();
-        let playerList = await roomData.getData(roomId);
-        const playersNum = playerList.length;
+        const userData = await roomData.getData(roomId);
 
-        if (!playerList) {
+        if (!userData) {
             response.error('The room does not exist');
+            return;
         }
 
-        if (playerList.indexOf(playerId) !== -1) {
+        const users = Object.keys(userData);
+
+        if (users.indexOf(userId) !== -1) {
             response.error('Already in the room');
         }
 
-        if (playerList.length >= this.config.game.playerLimit) {
-            response.error('The room is full');
-        } else {
-            playerList = await roomData.joinRoom(roomId, playerId);
+        await roomData.joinRoom(roomId, userId);
 
-            if (playerList.length >= this.config.game.playerLimit) {
-                this.event.emit(`${SERVICE_NAME}/fullRoom`, {roomId, playerList});
-            }
+        // this.event.emit(`${SERVICE_NAME}/${roomId}/presence`, {isJoin: true});
 
-            response.send({roomId, playersNum});
-        }
+        response.send();
     }
 
     async getRoomList(data, response) {
@@ -59,7 +55,6 @@ class RoomService extends BaseService {
         const roomListData = await roomData.getData();
 
         const roomList = Object.entries(roomListData)
-            .filter(([id, playerList]) => playerList.length < this.config.game.playerLimit)
             .map(([id, playerList]) => ({
                 id,
                 details: {

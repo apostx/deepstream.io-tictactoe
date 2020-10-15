@@ -13,32 +13,28 @@ class GameService extends BaseService {
         super(SERVICE_NAME);
     }
 
-    get eventHandlers() {
-        return {
-            'room/fullRoom': this.startGame,
-        };
-    }
-
     get rpcHandlers() {
         return {
+            start: this.startGame,
             mark: this.markField,
         };
     }
 
-    async startGame(data) {
-        const {roomId, playerList} = data;
-        const {firstPlayerId, secondPlayerId} = this.randomizePlayers(playerList);
+    async startGame(data, response) {
+        const {roomId, firstPlayer, secondPlayer} = data;
 
         const gameState = this.getGameState();
         const tableSize = this.config.game.tableSize;
 
-        await gameState.init(roomId, firstPlayerId, secondPlayerId, tableSize);
+        await gameState.init(roomId, firstPlayer, secondPlayer, tableSize);
 
-        this.event.emit(`${SERVICE_NAME}/${roomId}/nextTurn`, firstPlayerId);
+        this.event.emit(`${SERVICE_NAME}/${roomId}/nextTurn`, firstPlayer);
+
+        response.send();
     }
 
     async markField(data, response) {
-        const {roomId, playerId, colIndex, rowIndex} = data;
+        const {roomId, player, colIndex, rowIndex} = data;
 
         const gameState = this.getGameState();
         const stateData = await gameState.getData(roomId);
@@ -48,7 +44,7 @@ class GameService extends BaseService {
                 throw new Error('No running game');
             }
 
-            gameRuleset.validatePlayer(stateData, playerId);
+            gameRuleset.validatePlayer(stateData, player);
             gameRuleset.validateMark(stateData, colIndex, rowIndex);
         } catch (error) {
             response.error(error.message);
@@ -72,14 +68,13 @@ class GameService extends BaseService {
 
         const markData = {
             roomId,
-            playerId,
+            player,
             table: stateData.table,
             colIndex,
             rowIndex,
             status,
         };
 
-        this.event.emit(`${SERVICE_NAME}/mark`, markData);
         this.event.emit(`${SERVICE_NAME}/${roomId}/mark`, markData);
 
         if (isWin || isDraw) {
@@ -89,25 +84,10 @@ class GameService extends BaseService {
 
             await gameState.setData(roomId, stateData);
 
-            const nextTurnData = {
-                roomId,
-                currentPlayerId: stateData.currentPlayerId,
-            };
-
-            this.event.emit(`${SERVICE_NAME}/nextTurn`, nextTurnData);
             this.event.emit(`${SERVICE_NAME}/${roomId}/nextTurn`, stateData.currentPlayerId);
         }
 
         response.send();
-    }
-
-    randomizePlayers(playerList) {
-        const firstIndex = Math.floor(Math.random() * this.config.game.playerLimit);
-        const secondIndex = (firstIndex + 1) % this.config.game.playerLimit;
-        const firstPlayerId = playerList[firstIndex];
-        const secondPlayerId = playerList[secondIndex];
-
-        return {firstPlayerId, secondPlayerId};
     }
 
     getGameState() {

@@ -16,7 +16,7 @@ const TicTacToeRuleset = {
     validateMark: function(state, colIndex, rowIndex) {
         const field = state.table[rowIndex * state.tableSize + colIndex];
 
-        if (field !== undefined) {
+        if (field) {
             throw new Error('Invalid mark: field is already used');
         }
 

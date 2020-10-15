@@ -8,17 +8,11 @@ class RoomData extends BaseData {
     }
 
     async createAndJoinRoom(roomId, playerId) {
-        const playerList = [playerId];
-
-        return await this.setData(roomId, playerList);
+        await this.joinRoom(roomId, playerId);
     }
 
     async joinRoom(roomId, playerId) {
-        const playerList = await this.getData(roomId);
-
-        playerList.push(playerId);
-
-        return await this.setData(roomId, playerList);
+        return await this.setData(`${roomId}.${playerId}`, true); // TODO May could be null as default value
     }
 }
 

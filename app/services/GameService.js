@@ -21,20 +21,20 @@ class GameService extends BaseService {
     }
 
     async startGame(data, response) {
-        const {roomId, firstPlayer, secondPlayer} = data;
+        const {roomId, firstPlayerId, secondPlayerId} = data;
 
         const gameState = this.getGameState();
         const tableSize = this.config.game.tableSize;
 
-        await gameState.init(roomId, firstPlayer, secondPlayer, tableSize);
+        await gameState.init(roomId, firstPlayerId, secondPlayerId, tableSize);
 
-        this.event.emit(`${SERVICE_NAME}/${roomId}/nextTurn`, firstPlayer);
+        this.event.emit(`${SERVICE_NAME}/${roomId}/nextTurn`, {playerId: firstPlayerId});
 
         response.send();
     }
 
     async markField(data, response) {
-        const {roomId, player, colIndex, rowIndex} = data;
+        const {roomId, playerId, colIndex, rowIndex} = data;
 
         const gameState = this.getGameState();
         const stateData = await gameState.getData(roomId);
@@ -44,7 +44,7 @@ class GameService extends BaseService {
                 throw new Error('No running game');
             }
 
-            gameRuleset.validatePlayer(stateData, player);
+            gameRuleset.validatePlayer(stateData, playerId);
             gameRuleset.validateMark(stateData, colIndex, rowIndex);
         } catch (error) {
             response.error(error.message);
@@ -68,7 +68,7 @@ class GameService extends BaseService {
 
         const markData = {
             roomId,
-            player,
+            playerId,
             table: stateData.table,
             colIndex,
             rowIndex,
@@ -84,7 +84,7 @@ class GameService extends BaseService {
 
             await gameState.setData(roomId, stateData);
 
-            this.event.emit(`${SERVICE_NAME}/${roomId}/nextTurn`, stateData.currentPlayerId);
+            this.event.emit(`${SERVICE_NAME}/${roomId}/nextTurn`, {playerId: stateData.currentPlayerId});
         }
 
         response.send();
